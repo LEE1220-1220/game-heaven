@@ -1534,7 +1534,7 @@ footer .f-logo span { color: var(--pink); }
 
     <div class="side-box profile-card">
       <div class="avatar">😎</div>
-      <div class="nick">게스트유저</div>
+      <div class="nick" id="profileNick">게스트유저</div>
       <div class="lv">Lv.3 브론즈 게이머</div>
       <div class="point-display"><small>내 포인트</small><span id="myPoint">1,000</span> P</div>
       <button class="attend-btn" id="attendBtn" onclick="doAttend()">📅 오늘 출석체크 (+10P)</button>
@@ -2528,6 +2528,12 @@ var Auth = {
     // 관리자 메뉴 노출
     var adm = document.getElementById('navAdmin');
     if(adm) adm.style.display = this.isAdmin() ? '' : 'none';
+    // 프로필 카드 닉네임
+    var pn = document.getElementById('profileNick');
+    if(pn) pn.textContent = on ? this.current.nick : '게스트유저';
+    // 채팅 닉네임
+    var cm = document.getElementById('chatMe');
+    if(cm) cm.textContent = on ? this.current.nick : (typeof myNickname!=='undefined'?myNickname:'게스트유저');
   },
 
   msg: function(text, ok){
