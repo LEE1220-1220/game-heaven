@@ -7131,6 +7131,8 @@ function awardExpForRun(){
 
   closeGame = function(){
     awardExpForRun();   // 완료+점수 있으면 경험치 지급
+    // 로그인 상태면 최고기록 자동 랭킹 등록 (버튼 없이)
+    if(typeof Auth !== 'undefined' && Auth.current && typeof RankSubmit !== 'undefined') RankSubmit.submit();
     if(typeof GameClock !== 'undefined') GameClock.stop();
     if(typeof RankSubmit !== 'undefined') RankSubmit.reset();
     _rzRunGame = null; _rzRunSum = 0; _rzRunScore = 0; _expAwarded = false;
@@ -7175,15 +7177,13 @@ var RankSubmit = {
     var sc = readGameScore(_rzRunGame) || _rzRunScore;
     if(!(typeof Auth !== 'undefined' && Auth.current)){
       box.innerHTML =
-        '<button onclick="Auth.openLogin()">🔒 로그인하고 랭킹 등록' +
-          (sc > 0 ? ' (' + fmtGameScore(_rzRunGame, sc) + ')' : '') + '</button>' +
-        '<p class="hint">게스트는 랭킹에 등록할 수 없어요. 로그인하면 순위에 오를 수 있어요!</p>';
+        '<p class="hint">🔒 로그인하면 최고기록이 랭킹에 자동 등록됩니다</p>' +
+        '<button onclick="Auth.openLogin()">로그인</button>';
       return;
     }
     box.innerHTML =
-      '<button onclick="RankSubmit.submit()">🏆 랭킹 등록' +
-        (sc > 0 ? ' (' + fmtGameScore(_rzRunGame, sc) + ')' : '') + '</button>' +
-      '<p class="hint">누르지 않으면 순위에 오르지 않습니다</p>';
+      '<p class="hint">🏆 게임을 마치면 <b>최고기록이 자동</b>으로 랭킹에 등록됩니다' +
+        (sc > 0 ? ' (현재 ' + fmtGameScore(_rzRunGame, sc) + ')' : '') + '</p>';
   },
 
   submit: function(){
@@ -7222,18 +7222,17 @@ var RankSubmit = {
     var box = document.getElementById('rankSubmit');
     if(box){
       box.innerHTML =
-        '<button disabled>✅ 등록 완료</button>' +
-        '<p class="hint">' + (isBest ? '내 최고 기록을 갈아치웠습니다!' : '기존 최고 기록이 더 좋습니다') + '</p>';
+        '<p class="hint">' + (isBest ? '🏆 최고 기록으로 자동 등록되었습니다!' : '✅ 랭킹 반영됨 (기존 최고기록 유지)') + '</p>';
     }
 
     if(typeof RankZone !== 'undefined' && RankZone.timer !== null) RankZone.render();
     if(typeof CardRank !== 'undefined') CardRank.render();
     if(typeof renderRank === 'function') renderRank();
-    if(typeof LiveFeed !== 'undefined'){
+    if(isBest && typeof LiveFeed !== 'undefined'){
       var lbl = (typeof titles !== 'undefined' && titles[key]) ? titles[key] : key;
       LiveFeed.push('나 · ' + escapeHtml(lbl) + ' ' + fmtGameScore(key, score), true);
     }
-    toast((isBest ? '🏆 신기록! ' : '🏆 랭킹 등록! ') + fmtGameScore(key, score));
+    if(isBest) toast('🏆 신기록! ' + fmtGameScore(key, score) + ' 랭킹 등록');
   }
 };
 
@@ -7501,6 +7500,8 @@ var GameClock = {
     var key = activeGame;
     if(!key) return;
     if(typeof awardExpForRun === 'function') awardExpForRun();
+    // 시간 종료 시 최고기록 자동 등록
+    if(typeof Auth !== 'undefined' && Auth.current && typeof RankSubmit !== 'undefined') RankSubmit.submit();
     var limit = this.limitFor(key);
 
     var g = games[key];
