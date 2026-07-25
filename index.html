@@ -386,7 +386,10 @@ button { font-family: inherit; cursor: pointer; }
   display:flex; align-items:center; justify-content:center; font-size: 32px;
 }
 .profile-card .nick { font-weight: 800; font-size: 16px; }
-.profile-card .lv { font-size: 12px; color: var(--txt-dim); margin-bottom: 10px; }
+.profile-card .lv { font-size: 12px; color: var(--txt-dim); margin-bottom: 8px; }
+.profile-card .exp-wrap { height:8px; background:var(--deep); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:0 auto 4px; max-width:180px; }
+.profile-card .exp-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--cyan),var(--pink)); transition:width .4s; }
+.profile-card .exp-text { font-size:10px; color:var(--txt-dim); margin-bottom:10px; }
 .point-display {
   font-family:'DungGeunMo'; font-size: 22px; color: var(--yellow);
   background: var(--deep); border:1px solid var(--line); border-radius: 10px;
@@ -1400,14 +1403,6 @@ footer .f-logo span { color: var(--pink); }
       <div class="tag">모두가 즐기는 무료 미니게임 커뮤니티</div>
     </div>
   </a>
-  <div class="hot-search">
-    <span class="label">인기검색어</span>
-    <a href="#games">두더지잡기</a>
-    <a href="#games">스네이크</a>
-    <a href="#games">가위바위보</a>
-    <a href="#games">숫자야구</a>
-    <a href="#games">반응속도</a>
-  </div>
 </div>
 
 <!-- 메인 네비 -->
@@ -1546,7 +1541,9 @@ footer .f-logo span { color: var(--pink); }
     <div class="side-box profile-card">
       <div class="avatar">😎</div>
       <div class="nick" id="profileNick">게스트유저</div>
-      <div class="lv">Lv.3 브론즈 게이머</div>
+      <div class="lv" id="profileLv">Lv.1 브론즈</div>
+      <div class="exp-wrap"><div class="exp-bar" id="expBar"></div></div>
+      <div class="exp-text" id="expText">0 / 35 EXP</div>
       <div class="point-display"><small>내 포인트</small><span id="myPoint">1,000</span> P</div>
       <button class="attend-btn" id="attendBtn" onclick="doAttend()">📅 오늘 출석체크 (+10P)</button>
     </div>
@@ -1575,8 +1572,7 @@ footer .f-logo span { color: var(--pink); }
         <input id="chatInput" maxlength="100" placeholder="메시지를 입력하세요" autocomplete="off">
         <button type="submit" aria-label="전송">▶</button>
       </form>
-      <p class="chat-me">내 아이디 <b id="chatMe">게스트유저</b>
-        <button class="chat-rename" onclick="Chat.rename()">변경</button></p>
+      <p class="chat-me">내 아이디 <b id="chatMe">게스트유저</b></p>
     </div>
   </aside>
 </div>
@@ -2329,12 +2325,95 @@ function cssVar(name){ return getComputedStyle(document.documentElement).getProp
 /* ===================== 공통 상태 ===================== */
 let points = 1000;
 let attended = false;
+let exp = 0;
 let best = { mole: 0, snake: 0, react: null, rps: 0 };
+
+/* ===== 레벨/경험치 ===== */
+var LEVEL_MAX = 999;
+// 레벨 L 에서 L+1 로 가는 데 필요한 경험치 (레벨이 높을수록 점점 더 많이 필요)
+function expToNext(L){ return 20 + Math.floor(15 * Math.pow(L, 1.35)); }
+function levelFromExp(totalExp){
+  var lvl = 1, remain = totalExp || 0;
+  while(lvl < LEVEL_MAX){
+    var need = expToNext(lvl);
+    if(remain < need) break;
+    remain -= need; lvl++;
+  }
+  return { level: lvl, into: remain, need: (lvl >= LEVEL_MAX ? 0 : expToNext(lvl)) };
+}
+function tierName(L){
+  if(L >= 999) return '전설';
+  if(L >= 500) return '그랜드마스터';
+  if(L >= 200) return '마스터';
+  if(L >= 100) return '다이아';
+  if(L >= 60)  return '플래티넘';
+  if(L >= 30)  return '골드';
+  if(L >= 10)  return '실버';
+  return '브론즈';
+}
+function todayStr(){ return kstNow().toISOString().slice(0,10); }
+
+/* 내 상태(포인트·경험치·출석) 저장/불러오기 — 로그인 시 계정에, 게스트는 로컬에 */
+function loadUserState(){
+  if(typeof Auth !== 'undefined' && Auth.current){
+    points = (typeof Auth.current.points === 'number') ? Auth.current.points : 1000;
+    exp    = Auth.current.exp || 0;
+    attended = (Auth.current.attendDate === todayStr());
+  } else {
+    try {
+      var g = JSON.parse(localStorage.getItem('gh-guest') || '{}');
+      points = (typeof g.points === 'number') ? g.points : 1000;
+      exp = g.exp || 0;
+      attended = (g.attendDate === todayStr());
+    } catch(e){ points = 1000; exp = 0; attended = false; }
+  }
+  refreshProfileUI();
+}
+function saveUserState(){
+  if(typeof Auth !== 'undefined' && Auth.current){
+    Auth.current.points = points;
+    Auth.current.exp = exp;
+    if(typeof DB !== 'undefined' && DB.saveUser) DB.saveUser(Auth.current);
+  } else {
+    try {
+      var g = JSON.parse(localStorage.getItem('gh-guest') || '{}');
+      g.points = points; g.exp = exp;
+      localStorage.setItem('gh-guest', JSON.stringify(g));
+    } catch(e){}
+  }
+}
+function refreshProfileUI(){
+  var mp = document.getElementById('myPoint'); if(mp) mp.textContent = fmt(points);
+  var info = levelFromExp(exp);
+  var lv = document.getElementById('profileLv');
+  if(lv) lv.textContent = 'Lv.' + info.level + ' ' + tierName(info.level);
+  var bar = document.getElementById('expBar');
+  if(bar) bar.style.width = (info.need ? Math.min(100, info.into / info.need * 100) : 100) + '%';
+  var et = document.getElementById('expText');
+  if(et) et.textContent = info.need ? (info.into + ' / ' + info.need + ' EXP') : 'MAX';
+  var ab = document.getElementById('attendBtn');
+  if(ab){
+    if(attended){ ab.disabled = true; ab.textContent = '✅ 출석 완료!'; }
+    else { ab.disabled = false; ab.textContent = '📅 오늘 출석체크 (+10P)'; }
+  }
+}
+function gainExp(amount){
+  if(exp >= 0){
+    var before = levelFromExp(exp).level;
+    exp += amount;
+    var after = levelFromExp(exp).level;
+    saveUserState();
+    refreshProfileUI();
+    if(after > before) toast('🎉 레벨 업! <b>Lv.' + after + '</b> 달성!');
+    else toast('✨ 경험치 +' + amount);
+  }
+}
 
 function fmt(n){ return n.toLocaleString('ko-KR'); }
 function addPoints(n, reason){
   points += n;
-  document.getElementById('myPoint').textContent = fmt(points);
+  var mp = document.getElementById('myPoint'); if(mp) mp.textContent = fmt(points);
+  saveUserState();
   toast(reason + ' <span class="p">+' + fmt(n) + 'P</span>');
   renderRank();
 }
@@ -2347,12 +2426,21 @@ function toast(html){
 }
 function closePopup(){ document.getElementById('popup').style.display='none'; }
 function doAttend(){
-  if(attended){ toast('오늘은 이미 출석했어요! 내일 또 만나요 👋'); return; }
+  var today = todayStr();
+  var alreadyToday = (typeof Auth !== 'undefined' && Auth.current)
+    ? (Auth.current.attendDate === today)
+    : (function(){ try { return (JSON.parse(localStorage.getItem('gh-guest')||'{}').attendDate === today); } catch(e){ return false; } })();
+  if(alreadyToday || attended){ toast('오늘은 이미 출석했어요! 내일 또 만나요 👋'); return; }
   attended = true;
-  const btn = document.getElementById('attendBtn');
-  btn.disabled = true; btn.textContent = '✅ 출석 완료!';
-  var sc = addActScore('attend');
-  addPoints(sc, '출석체크 완료! (+' + sc + 'P)');
+  var sc = addActScore('attend');           // 랭킹 활동점수(로그인 시)
+  points += sc;                              // 지갑 포인트
+  // 출석 날짜 기록
+  if(typeof Auth !== 'undefined' && Auth.current){ Auth.current.attendDate = today; }
+  else { try { var g = JSON.parse(localStorage.getItem('gh-guest')||'{}'); g.attendDate = today; localStorage.setItem('gh-guest', JSON.stringify(g)); } catch(e){} }
+  saveUserState();
+  refreshProfileUI();
+  toast('출석체크 완료! <span class="p">+' + sc + 'P</span>');
+  renderRank();
 }
 
 const now = new Date();
@@ -2523,6 +2611,8 @@ var Auth = {
     // 채팅 닉네임
     var cm = document.getElementById('chatMe');
     if(cm) cm.textContent = on ? this.current.nick : (typeof myNickname!=='undefined'?myNickname:'게스트유저');
+    // 포인트·경험치·출석 상태 불러오기
+    if(typeof loadUserState === 'function') loadUserState();
   },
 
   msg: function(text, ok){
@@ -2564,7 +2654,7 @@ var Auth = {
     var acc = {
       uid: this.slug(id), id:id, nick:nick, email:email, pwHash:pwHash,
       nickChangedAt: Date.now(), createdAt: Date.now(),
-      role: role, banned: false, points: 0
+      role: role, banned: false, points: 1000, exp: 0, attendDate: ''
     };
     try { await DB.saveUser(acc); } catch(e){ this.msg('저장에 실패했습니다. 잠시 후 다시 시도해 주세요.'); return; }
 
@@ -6630,8 +6720,23 @@ var RankZone = {
     // 실시간으로 들어온 점수를 합친다 (같은 이름이면 더 좋은 기록만 남긴다)
     rows = this.applyLive(key, rows, asc);
 
+    // 내 기록을 추가 (로그인했으면 닉네임으로, 게스트면 '나')
+    var myLabel = (typeof Auth !== 'undefined' && Auth.current && Auth.current.nick) ? Auth.current.nick : '나';
     var mine = (myBest[bucket] || {})[key];
-    if(mine > 0) rows.push({ n: '나', v: mine, me: true, t: (myBestAt[bucket] || {})[key] || 0 });
+    if(mine > 0) rows.push({ n: myLabel, v: mine, me: true, t: (myBestAt[bucket] || {})[key] || 0 });
+
+    // 닉네임 중복 제거: 한 게임에 같은 닉네임은 최고기록 1개만 남긴다
+    var byName = {};
+    rows.forEach(function(r){
+      var ex = byName[r.n];
+      if(!ex){ byName[r.n] = r; return; }
+      var better = asc ? r.v < ex.v : r.v > ex.v;
+      if(better || (r.v === ex.v && r.t < ex.t)) byName[r.n] = r;
+    });
+    rows = Object.keys(byName).map(function(k){ return byName[k]; });
+
+    // '나' 표시는 로그인한 내 닉네임에만
+    rows.forEach(function(r){ r.me = (r.n === myLabel); });
 
     rows.sort(function(a, b){
       return (asc ? a.v - b.v : b.v - a.v) || a.t - b.t;
@@ -6677,8 +6782,9 @@ var RankZone = {
   totals: function(bucket){
     var self = this, table = this.RANK_POINTS[bucket] || this.RANK_POINTS.daily;
     var sum = {};
+    var myLabel = (typeof Auth !== 'undefined' && Auth.current && Auth.current.nick) ? Auth.current.nick : '나';
 
-    // 1) 게임별 순위 포인트
+    // 1) 게임별 순위 포인트 (board 가 이미 닉네임 기준으로 반환)
     activeGameKeys().forEach(function(k){
       self.ranked(self.board(k, bucket)).forEach(function(r){
         var pt = table[r.rank - 1];
@@ -6686,15 +6792,18 @@ var RankZone = {
       });
     });
 
-    // 2) 활동 포인트 (출석·글·댓글)
+    // 2) 활동 포인트 (출석·글·댓글) — 내 것
     var names = rankers.map(function(r){ return r[0]; });
-    if(names.indexOf('나') === -1) names.push('나');
+    if(names.indexOf(myLabel) === -1) names.push(myLabel);
     names.forEach(function(n){
-      sum[n] = (sum[n] || 0) + (n === '나' ? (myAct[bucket] || 0) : self.fakeAct(n, bucket));
+      sum[n] = (sum[n] || 0) + (n === myLabel ? (myAct[bucket] || 0) : self.fakeAct(n, bucket));
     });
 
+    // 게임 순위로 등장한 다른 실제 플레이어도 종합 랭킹에 포함
+    Object.keys(sum).forEach(function(n){ if(names.indexOf(n) === -1) names.push(n); });
+
     return names
-      .map(function(n){ return { n: n, v: sum[n] || 0, me: n === '나' }; })
+      .map(function(n){ return { n: n, v: sum[n] || 0, me: (n === myLabel) }; })
       .sort(function(a, b){ return b.v - a.v || (a.me ? 1 : 0) - (b.me ? 1 : 0); });
   },
 
@@ -6939,13 +7048,26 @@ var CardRank = {
 
 /* 게임 한 판에서 번 포인트를 기간별로 기록한다.
    50개 게임 코드는 하나도 건드리지 않고, 포인트가 지급되는 길목에서만 모은다. */
-var _rzRunGame = null, _rzRunSum = 0, _rzRunScore = 0;
+var _rzRunGame = null, _rzRunSum = 0, _rzRunScore = 0, _expAwarded = false;
+
+/* 게임을 완료(점수>0)했을 때 경험치를 준다. 정답이 하나도 없으면(점수 0) 안 준다. 한 판당 1회. */
+function awardExpForRun(){
+  if(_expAwarded) return;
+  var key = _rzRunGame;
+  if(!key) return;
+  var sc = _rzRunScore || (typeof readGameScore === 'function' ? readGameScore(key) : 0) || _rzRunSum;
+  if(sc > 0){
+    _expAwarded = true;
+    var gain = 15 + Math.min(35, _rzRunSum || 0);
+    if(typeof gainExp === 'function') gainExp(gain);
+  }
+}
 
 (function(){
   var _openGame = openGame, _closeGame = closeGame, _addPoints = addPoints;
 
   openGame = function(key){
-    _rzRunGame = key; _rzRunSum = 0; _rzRunScore = 0;
+    _rzRunGame = key; _rzRunSum = 0; _rzRunScore = 0; _expAwarded = false;
     activeGame = key;
     document.getElementById('modalTitle').textContent = titles[key];
     document.getElementById('modalDim').classList.add('show');
@@ -6974,6 +7096,17 @@ var _rzRunGame = null, _rzRunSum = 0, _rzRunScore = 0;
     var body = document.getElementById('modalBody');
     if(body && games[key] && games[key].init) games[key].init(body);
     if(typeof GameClock !== 'undefined') GameClock.start(key);
+    // 게임 안에 자체 '게임 시작' 버튼이 있으면 자동으로 눌러 바로 시작하고, 그 버튼은 숨긴다
+    if(body){
+      var btns = body.querySelectorAll('button');
+      for(var i=0; i<btns.length; i++){
+        if((btns[i].textContent || '').trim() === '게임 시작'){
+          try { btns[i].click(); } catch(e){}
+          btns[i].style.display = 'none';
+          break;
+        }
+      }
+    }
   };
 
   addPoints = function(n, reason){
@@ -6997,9 +7130,10 @@ var _rzRunGame = null, _rzRunSum = 0, _rzRunScore = 0;
   };
 
   closeGame = function(){
+    awardExpForRun();   // 완료+점수 있으면 경험치 지급
     if(typeof GameClock !== 'undefined') GameClock.stop();
     if(typeof RankSubmit !== 'undefined') RankSubmit.reset();
-    _rzRunGame = null; _rzRunSum = 0; _rzRunScore = 0; _rzRunScore = 0;
+    _rzRunGame = null; _rzRunSum = 0; _rzRunScore = 0; _expAwarded = false;
     _closeGame();
   };
 })();
@@ -7308,6 +7442,7 @@ var Shop = {
     if(mp) mp.textContent = fmt(points);
     this.bag.push(id);
     this.save();
+    if(typeof saveUserState === 'function') saveUserState();
     this.render();
     toast('🛒 ' + it.name + ' 구매 완료!');
   }
@@ -7365,6 +7500,7 @@ var GameClock = {
     this.stop();
     var key = activeGame;
     if(!key) return;
+    if(typeof awardExpForRun === 'function') awardExpForRun();
     var limit = this.limitFor(key);
 
     var g = games[key];
@@ -7825,15 +7961,7 @@ var Chat = {
   },
 
   rename: function(){
-    var v = prompt('채팅에서 쓸 아이디를 입력하세요', myNickname);
-    if(v === null) return;
-    v = v.trim();
-    if(v.length < 2){ toast('2자 이상 입력해주세요'); return; }
-    myNickname = v;
-    savePosts();
-    this.renderMe();
-    this.push('sys', '', '아이디를 ' + v + ' (으)로 바꿨습니다');
-    this.render();
+    toast('채팅 이름은 회원 닉네임으로 고정되어 변경할 수 없어요.');
   },
 
   renderMe: function(){
