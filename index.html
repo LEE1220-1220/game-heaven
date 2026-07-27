@@ -149,6 +149,8 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 28px;
   box-shadow: 0 0 24px var(--glow-pink);
 }
+.logo .mark.mark-logo { background: none; box-shadow: none; overflow: hidden; }
+.logo .mark.mark-logo svg { width: 100%; height: 100%; display: block; }
 .logo h1 { font-family:'DungGeunMo'; font-size: 30px; letter-spacing: 1px; }
 .logo h1 span { color: var(--pink); }
 .logo .tag { font-size: 12px; color: var(--txt-dim); }
@@ -1425,7 +1427,20 @@ footer .f-logo span { color: var(--pink); }
 <!-- 로고 -->
 <div class="logo-area">
   <a href="#" class="logo" onclick="goHome();return false;">
-    <div class="mark">🕹️</div>
+    <div class="mark mark-logo" title="검증천국">
+      <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="검증천국 로고">
+        <rect x="2"  y="2"  width="22" height="22" rx="5" fill="#E63329"/>
+        <rect x="28" y="2"  width="22" height="22" rx="5" fill="#2FA84F"/>
+        <rect x="2"  y="28" width="22" height="22" rx="5" fill="#2C6FE0"/>
+        <rect x="28" y="28" width="22" height="22" rx="5" fill="#F5B301"/>
+        <g fill="#fff" font-family="'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif" font-weight="800" font-size="14" text-anchor="middle">
+          <text x="13" y="13" dominant-baseline="central">검</text>
+          <text x="39" y="13" dominant-baseline="central">증</text>
+          <text x="13" y="39" dominant-baseline="central">천</text>
+          <text x="39" y="39" dominant-baseline="central">국</text>
+        </g>
+      </svg>
+    </div>
     <div>
       <h1>게임<span>천국</span></h1>
       <div class="tag">모두가 즐기는 무료 미니게임 커뮤니티</div>
