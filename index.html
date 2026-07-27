@@ -237,6 +237,31 @@ button { font-family: inherit; cursor: pointer; }
   background:var(--line); color:var(--txt-dim); }
 .multi-card.soon { opacity:.85; }
 .multi-note { text-align:center; color:var(--txt-dim); font-size:13px; margin-top:18px; }
+/* 가위바위보 대전 */
+.rps-wrap { text-align:center; padding:14px 6px; }
+.rps-status { font-family:'DungGeunMo'; font-size:18px; margin:10px 0; }
+.rps-spin { font-size:34px; letter-spacing:8px; animation:rpsPulse 1s infinite; margin:16px 0; }
+@keyframes rpsPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.92)} }
+.rps-hint { color:var(--txt-dim); font-size:13px; }
+.rps-vs { font-size:16px; margin-bottom:14px; }
+.rps-vs b { color:var(--cyan); }
+.rps-vs-mid { color:var(--pink); font-weight:800; margin:0 8px; }
+.rps-tag { font-size:11px; font-weight:800; padding:2px 8px; border-radius:20px; margin-left:6px; }
+.rps-tag.real { background:var(--green); color:#06240f; }
+.rps-tag.ai { background:var(--line); color:var(--txt-dim); }
+.rps-choices { display:flex; gap:12px; justify-content:center; margin:8px 0 16px; }
+.rps-choices button { display:flex; flex-direction:column; align-items:center; gap:4px;
+  border:2px solid var(--line); background:var(--panel); border-radius:16px; padding:16px 18px;
+  font-size:38px; cursor:pointer; transition:.15s; }
+.rps-choices button span { font-size:13px; font-weight:800; color:var(--txt); }
+.rps-choices button:hover { border-color:var(--cyan); transform:translateY(-3px); }
+.rps-rule { color:var(--txt-dim); font-size:12px; }
+.rps-result-row { display:flex; align-items:center; justify-content:center; gap:18px; margin:14px 0; }
+.rps-hand .h { font-size:54px; }
+.rps-hand .l { font-size:13px; color:var(--txt-dim); margin-top:4px; }
+.rps-result { font-family:'DungGeunMo'; font-size:24px; margin:12px 0 20px; }
+.rps-result.win { color:var(--green); }
+.rps-result.lose { color:var(--danger); }
 .sec-title h3 { font-family:'DungGeunMo'; font-size: 20px; }
 .sec-title h3 span { color: var(--pink); }
 .sec-title .line { flex:1; height:1px; background: var(--line); }
@@ -1377,25 +1402,6 @@ footer .f-logo span { color: var(--pink); }
 </head>
 <body>
 
-<!-- 팝업 공지 -->
-<div class="popup-dim" id="popup" style="display:none">
-  <div class="popup">
-    <div class="p-head">
-      <div class="big">🎮</div>
-      <h5>게임천국 오픈 이벤트!</h5>
-    </div>
-    <div class="p-body">
-      지금 출석체크만 해도 <b>+10P</b> 지급!<br>
-      미니게임 39종에서 기록을 세우고 <b>랭킹 1등</b>에 도전하세요.
-      게임마다 1등 5P · 2등 3P · 3등 1P를 받습니다.
-    </div>
-    <div class="p-foot">
-      <button onclick="closePopup()">오늘 하루 보지 않기</button>
-      <button onclick="closePopup()">닫기</button>
-    </div>
-  </div>
-</div>
-
 <!-- 상단 유틸바 -->
 <div class="topbar">
   <div class="inner">
@@ -1954,10 +1960,10 @@ footer .f-logo span { color: var(--pink); }
   </div>
 
   <div class="multi-grid">
-    <div class="multi-card soon">
+    <div class="multi-card" onclick="RPS.open()" style="cursor:pointer">
       <div class="mc-ic">✊</div>
       <div class="mc-name">실시간 가위바위보</div>
-      <div class="mc-tag">준비 중</div>
+      <div class="mc-tag" style="background:var(--green);color:#06240f">▶ 대전 가능</div>
     </div>
     <div class="multi-card soon">
       <div class="mc-ic">🔤</div>
@@ -1976,6 +1982,17 @@ footer .f-logo span { color: var(--pink); }
     </div>
   </div>
   <p class="multi-note">원하는 멀티 게임을 관리자에게 알려주시면 순서대로 추가됩니다.</p>
+</div>
+
+<!-- ===== 가위바위보 대전 모달 ===== -->
+<div class="modal-dim" id="rpsDim" onclick="if(event.target===this)RPS.close()">
+  <div class="modal">
+    <div class="m-head">
+      <b>✊ 실시간 가위바위보</b>
+      <button class="close" onclick="RPS.close()">✕</button>
+    </div>
+    <div class="m-body" id="rpsBody"></div>
+  </div>
 </div>
 
 <!-- ===== 랭킹 화면 ===== -->
@@ -2500,13 +2517,9 @@ function closePopup(){
 }
 /* 오픈 이벤트 팝업: 하루 1회만, 로그인(계정 있는) 회원에겐 안 보임 */
 function maybeShowPopup(){
+  // 오픈 이벤트 팝업 사용 안 함 (항상 숨김)
   var el = document.getElementById('popup');
-  if(!el) return;
-  if(typeof Auth !== 'undefined' && Auth.current){ el.style.display='none'; return; }  // 로그인 회원 제외
-  var seen = null;
-  try { seen = localStorage.getItem('gh-popup-date'); } catch(e){}
-  if(seen === todayStr()){ el.style.display='none'; return; }  // 오늘 이미 봤음
-  el.style.display='';  // 게스트 + 오늘 처음 → 보이기
+  if(el) el.style.display='none';
 }
 function doAttend(){
   var today = todayStr();
@@ -2627,7 +2640,7 @@ var Auth = {
       try {
         var all = await DB.getUsers();
         var me = all.find(function(u){ return u.uid === sessionUid; });
-        if(me && !me.banned){ this.current = me; myNickname = me.nick; }
+        if(me && !me.banned){ this.current = me; myNickname = me.nick; this.claimSession(me.uid); }
         else { try{ localStorage.removeItem('gh-session'); }catch(e){} }
       } catch(e){}
     }
@@ -2640,6 +2653,51 @@ var Auth = {
   },
   setSession: function(uid){
     try { if(uid) localStorage.setItem('gh-session', uid); else localStorage.removeItem('gh-session'); } catch(e){}
+  },
+
+  /* ===== 아이디당 1세션만 허용 ===== */
+  sessionToken: null,
+  _sessionRef: null,
+  claimSession: function(uid){
+    if(!(typeof DB !== 'undefined' && DB.enabled && DB.ref) || !uid) return;
+    var self = this;
+    var token = uid + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    this.sessionToken = token;
+    try { localStorage.setItem('gh-session-token', token); } catch(e){}
+    // 내 토큰을 최신으로 등록 (마지막 로그인이 이긴다). 등록이 끝난 뒤 감시 시작.
+    try {
+      DB.ref.ref('sessions/' + uid).set(token, function(){ self.watchSession(uid); });
+    } catch(e){ this.watchSession(uid); }
+  },
+  watchSession: function(uid){
+    var self = this;
+    this.unwatchSession();
+    if(!(typeof DB !== 'undefined' && DB.enabled && DB.ref)) return;
+    this._sessionRef = DB.ref.ref('sessions/' + uid);
+    this._sessionRef.on('value', function(snap){
+      var remote = snap.val();
+      // 원격 토큰이 내 것과 달라졌다 = 같은 아이디로 다른 기기에서 로그인함 → 이 세션 강제 로그아웃
+      if(remote && self.sessionToken && remote !== self.sessionToken && self.current){
+        self.forceLogout();
+      }
+    });
+  },
+  unwatchSession: function(){
+    try { if(this._sessionRef) this._sessionRef.off(); } catch(e){}
+    this._sessionRef = null;
+  },
+  forceLogout: function(){
+    this.unwatchSession();
+    this.current = null;
+    myNickname = '게스트유저';
+    this.setSession(null);
+    this.sessionToken = null;
+    try { localStorage.removeItem('gh-session-token'); } catch(e){}
+    this.refreshBar();
+    var nickEl = document.getElementById('chatMe'); if(nickEl) nickEl.textContent = myNickname;
+    toast('⚠️ 같은 아이디로 다른 기기에서 접속되어 로그아웃되었습니다. 다시 로그인해 주세요.');
+    var self = this;
+    setTimeout(function(){ if(self.openLogin) self.openLogin(); }, 400);
   },
 
   openSignup: function(){
@@ -2682,6 +2740,7 @@ var Auth = {
     this.current = found;
     myNickname = found.nick;
     this.setSession(found.uid);
+    this.claimSession(found.uid);   // 아이디당 1세션 — 이전 접속은 자동 로그아웃
     if(typeof savePosts === 'function') savePosts();
     this.refreshBar();
     var nickEl = document.getElementById('chatMe'); if(nickEl) nickEl.textContent = myNickname;
@@ -2695,6 +2754,9 @@ var Auth = {
     this.current = null;
     myNickname = '게스트유저';
     this.setSession(null);
+    this.unwatchSession();
+    this.sessionToken = null;
+    try { localStorage.removeItem('gh-session-token'); } catch(e){}
     this.refreshBar();
     var nickEl = document.getElementById('chatMe'); if(nickEl) nickEl.textContent = myNickname;
     if(typeof RankZone !== 'undefined' && RankZone.timer !== null) RankZone.render();
@@ -2773,6 +2835,7 @@ var Auth = {
     this.current = acc;
     myNickname = nick;
     this.setSession(acc.uid);
+    this.claimSession(acc.uid);
     if(typeof savePosts === 'function') savePosts();
     var nickEl = document.getElementById('chatMe'); if(nickEl) nickEl.textContent = myNickname;
     this.refreshBar();
@@ -7963,12 +8026,15 @@ var AdminPage = {
     }
     listEl.textContent = '불러오는 중…';
     DB.ref.ref('presence').get().then(function(snap){
-      var v = snap.val() || {}, now = Date.now(), FRESH = 45000, nicks = {};
+      var v = snap.val() || {}, now = Date.now(), FRESH = 45000, GHOST = 120000, nicks = {};
       Object.keys(v).forEach(function(k){
         var e = v[k];
-        if(e && e.at && (now - e.at) <= FRESH){
+        var at = (e && e.at) ? e.at : 0;
+        if(at && (now - at) <= FRESH){
           var n = e.nick || '게스트';
           nicks[n] = (nicks[n] || 0) + 1;
+        } else if(!at || (now - at) > GHOST){
+          try { DB.ref.ref('presence/' + k).remove(); } catch(e2){}  // 유령 세션 제거
         }
       });
       var names = Object.keys(nicks).sort();
@@ -8266,6 +8332,208 @@ var Chat = {
 };
 
 Chat.init();
+
+/* ===================== 실시간 가위바위보 (게임존 멀티) ===================== */
+var RPS = {
+  moves: { rock:'✊ 바위', paper:'✋ 보', scissors:'✌️ 가위' },
+  state:'idle', opp:null, matchId:null, iAmReal:false,
+  searchTimer:null, moveTimer:null, notifyRef:null, matchRef:null, myMove:null,
+
+  // AI 아이디: 한글 90% / 영어 10%
+  aiName: function(){
+    var kSurname = ['김','이','박','최','정','강','조','윤','장','임','한','오','서','신','권','황','안','송','전','홍','고','문','양','손','배','백','허','유','남','심'];
+    var kWord = ['용사','고수','챔피언','달인','전사','대왕','짱','최고','무적','번개','태풍','불꽃','바람','천재','고인물','도전자','마스터','히어로','폭풍','질풍','그림자','빛','달빛','별','드래곤','호랭이','사자','독수리','늑대','여우'];
+    var eA = ['Cool','Mega','Ultra','Pro','Dark','Fast','Lucky','Super','Neo','Ace','Wild','Epic','Nova','Zero','Iron'];
+    var eB = ['Gamer','Player','Ninja','Master','King','Star','Wolf','Fox','Hero','Bot','Fist','Blade','Storm','Ghost','Tiger'];
+    var pick = function(a){ return a[Math.floor(Math.random()*a.length)]; };
+    if(Math.random() < 0.9){
+      return pick(kSurname) + pick(kWord) + (Math.random()<0.55 ? Math.floor(Math.random()*99) : '');
+    }
+    return pick(eA) + pick(eB) + Math.floor(Math.random()*99);
+  },
+
+  open: function(){
+    if(!(typeof Auth !== 'undefined' && Auth.current)){
+      toast('로그인 후 대전할 수 있어요.');
+      if(typeof Auth !== 'undefined' && Auth.openLogin) Auth.openLogin();
+      return;
+    }
+    document.getElementById('rpsDim').classList.add('show');
+    this.startSearch();
+  },
+  close: function(){
+    this.cleanup();
+    document.getElementById('rpsDim').classList.remove('show');
+  },
+  cleanup: function(){
+    clearTimeout(this.searchTimer); clearTimeout(this.moveTimer);
+    this.searchTimer = this.moveTimer = null;
+    try { if(this.notifyRef) this.notifyRef.off(); } catch(e){}
+    try { if(this.matchRef) this.matchRef.off(); } catch(e){}
+    this.notifyRef = this.matchRef = null;
+    // 대기열에서 나 제거
+    if(typeof DB !== 'undefined' && DB.enabled && DB.ref && Auth.current){
+      try {
+        DB.ref.ref('rps/waiting').transaction(function(cur){
+          if(cur && cur.uid === Auth.current.uid) return null;
+          return cur;
+        });
+      } catch(e){}
+    }
+    this.myMove = null;
+  },
+
+  body: function(html){ var b = document.getElementById('rpsBody'); if(b) b.innerHTML = html; },
+
+  startSearch: function(){
+    var self = this;
+    this.cleanup();
+    this.state = 'searching'; this.opp = null; this.matchId = null; this.iAmReal = false; this.myMove = null;
+    this.body('<div class="rps-wrap"><div class="rps-status">🔍 대전 상대를 찾는 중…</div>' +
+              '<div class="rps-spin">✊ ✋ ✌️</div>' +
+              '<p class="rps-hint">접속 중인 다른 유저를 찾고 있어요 (없으면 AI와 대전)</p></div>');
+
+    if(!(typeof DB !== 'undefined' && DB.enabled && DB.ref)){
+      // 오프라인/로컬: 바로 AI
+      this.searchTimer = setTimeout(function(){ self.startAI(); }, 1200);
+      return;
+    }
+
+    var me = { uid: Auth.current.uid, nick: Auth.current.nick, at: Date.now() };
+    var claimed = null;
+    // 대기 슬롯 트랜잭션: 상대 있으면 잡고, 없으면 내가 대기
+    DB.ref.ref('rps/waiting').transaction(function(cur){
+      if(cur && cur.uid && cur.uid !== me.uid && (Date.now() - (cur.at||0) < 12000)){
+        claimed = cur; return null;      // 상대 확보 → 슬롯 비움
+      }
+      claimed = null; return me;         // 내가 대기자
+    }, function(err, committed){
+      if(err){ self.startAI(); return; }
+      if(claimed){
+        // 내가 매칭자 → 매치룸 생성 + 상대에게 알림
+        var mid = DB.ref.ref('rps/matches').push().key;
+        self.matchId = mid; self.opp = { nick: claimed.nick, uid: claimed.uid }; self.iAmReal = true;
+        DB.ref.ref('rps/matches/' + mid).set({ moves:{}, at: firebase.database.ServerValue.TIMESTAMP });
+        DB.ref.ref('rps/notify/' + claimed.uid).set({ mid: mid, nick: me.nick, uid: me.uid, at: Date.now() });
+        self.enterMatch();
+      } else {
+        // 내가 대기자 → 알림 기다림 (5초) → 없으면 AI
+        self.notifyRef = DB.ref.ref('rps/notify/' + me.uid);
+        self.notifyRef.on('value', function(snap){
+          var d = snap.val();
+          if(d && d.mid){
+            self.notifyRef.off(); self.notifyRef = null;
+            try { DB.ref.ref('rps/notify/' + me.uid).remove(); } catch(e){}
+            clearTimeout(self.searchTimer);
+            self.matchId = d.mid; self.opp = { nick: d.nick, uid: d.uid }; self.iAmReal = true;
+            self.enterMatch();
+          }
+        });
+        self.searchTimer = setTimeout(function(){
+          // 타임아웃 → 대기열에서 나 제거 후 AI
+          if(self.notifyRef){ self.notifyRef.off(); self.notifyRef = null; }
+          DB.ref.ref('rps/waiting').transaction(function(cur){
+            if(cur && cur.uid === me.uid) return null; return cur;
+          });
+          self.startAI();
+        }, 5000);
+      }
+    });
+  },
+
+  startAI: function(){
+    this.state = 'playing'; this.iAmReal = false;
+    this.opp = { nick: this.aiName(), uid: 'ai' };
+    this.showBoard();
+  },
+  enterMatch: function(){
+    this.state = 'playing';
+    this.showBoard();
+  },
+
+  showBoard: function(){
+    var vs = this.iAmReal ? '실제 유저' : 'AI';
+    this.body(
+      '<div class="rps-wrap">' +
+        '<div class="rps-vs">나 <span class="rps-vs-mid">VS</span> <b>' + escapeHtml(this.opp.nick) + '</b> <span class="rps-tag ' + (this.iAmReal?'real':'ai') + '">' + vs + '</span></div>' +
+        '<div class="rps-status" id="rpsStatus">무엇을 낼까요?</div>' +
+        '<div class="rps-choices">' +
+          '<button onclick="RPS.pick(\'scissors\')">✌️<span>가위</span></button>' +
+          '<button onclick="RPS.pick(\'rock\')">✊<span>바위</span></button>' +
+          '<button onclick="RPS.pick(\'paper\')">✋<span>보</span></button>' +
+        '</div>' +
+        '<div class="rps-rule">이기면 +2P · 지면 -2P · 비기면 +1P</div>' +
+      '</div>');
+  },
+
+  pick: function(mv){
+    if(this.state !== 'playing') return;
+    this.state = 'waiting';
+    this.myMove = mv;
+    document.getElementById('rpsStatus').textContent = '상대가 내는 중…';
+    var self = this;
+    if(!this.iAmReal){
+      // AI: 랜덤
+      var ai = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+      setTimeout(function(){ self.reveal(mv, ai); }, 800);
+      return;
+    }
+    // 실제 유저: 내 수를 매치룸에 쓰고 상대 수 대기 (8초 → AI 대체)
+    try {
+      DB.ref.ref('rps/matches/' + this.matchId + '/moves/' + Auth.current.uid).set(mv);
+    } catch(e){}
+    this.matchRef = DB.ref.ref('rps/matches/' + this.matchId + '/moves');
+    this.matchRef.on('value', function(snap){
+      var mvs = snap.val() || {};
+      var oppMv = mvs[self.opp.uid];
+      if(oppMv){
+        self.matchRef.off(); self.matchRef = null;
+        clearTimeout(self.moveTimer);
+        try { DB.ref.ref('rps/matches/' + self.matchId).remove(); } catch(e){}
+        self.reveal(mv, oppMv);
+      }
+    });
+    this.moveTimer = setTimeout(function(){
+      // 상대가 안 냄 → AI가 대신 (연결 끊김 대비)
+      if(self.matchRef){ self.matchRef.off(); self.matchRef = null; }
+      try { DB.ref.ref('rps/matches/' + self.matchId).remove(); } catch(e){}
+      var ai = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+      self.reveal(mv, ai);
+    }, 8000);
+  },
+
+  reveal: function(mine, theirs){
+    this.state = 'done';
+    var result; // win / lose / draw
+    if(mine === theirs) result = 'draw';
+    else if((mine==='rock'&&theirs==='scissors')||(mine==='scissors'&&theirs==='paper')||(mine==='paper'&&theirs==='rock')) result = 'win';
+    else result = 'lose';
+
+    var delta = result==='win' ? 2 : result==='lose' ? -2 : 1;
+    if(typeof points !== 'undefined'){
+      points = Math.max(0, points + delta);
+      var mp = document.getElementById('myPoint'); if(mp) mp.textContent = (typeof fmt==='function'?fmt(points):points);
+      if(typeof saveUserState === 'function') saveUserState();
+      if(typeof renderRank === 'function') renderRank();
+    }
+
+    var msg = result==='win' ? '🎉 이겼다! +2P' : result==='lose' ? '😢 졌어요 -2P' : '🤝 비겼어요 +1P';
+    var cls = result==='win' ? 'win' : result==='lose' ? 'lose' : '';
+    this.body(
+      '<div class="rps-wrap">' +
+        '<div class="rps-result-row">' +
+          '<div class="rps-hand"><div class="h">' + this.moves[mine].split(' ')[0] + '</div><div class="l">나</div></div>' +
+          '<div class="rps-vs-mid">VS</div>' +
+          '<div class="rps-hand"><div class="h">' + this.moves[theirs].split(' ')[0] + '</div><div class="l">' + escapeHtml(this.opp.nick) + '</div></div>' +
+        '</div>' +
+        '<div class="rps-result ' + cls + '">' + msg + '</div>' +
+        '<div class="btn-line">' +
+          '<button class="btn-ghost" onclick="RPS.close()">그만하기</button>' +
+          '<button class="btn-primary" onclick="RPS.startSearch()">다시 하기</button>' +
+        '</div>' +
+      '</div>');
+  }
+};
 
 </script>
 </body>
