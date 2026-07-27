@@ -2093,7 +2093,9 @@ footer .f-logo span { color: var(--pink); }
     <div class="ap-tabs">
       <button class="on" onclick="AdminPage.tab(this,'dash')">📊 대시보드</button>
       <button onclick="AdminPage.tab(this,'members')">👥 회원관리</button>
-      <button onclick="AdminPage.tab(this,'games')">🎮 게임관리</button>
+      <button onclick="AdminPage.tab(this,'games')">🎮 미니게임관리</button>
+      <button onclick="AdminPage.tab(this,'multi')">🕹️ 멀티게임존</button>
+      <button onclick="AdminPage.tab(this,'rhythm')">🎵 리듬게임존</button>
       <button onclick="AdminPage.tab(this,'data')">🗄️ 랭킹·데이터</button>
     </div>
     <div class="m-body">
@@ -2125,6 +2127,16 @@ footer .f-logo span { color: var(--pink); }
         <input class="g-input" id="apgSearch" placeholder="게임 이름으로 찾기" autocomplete="off"
                oninput="AdminPage.renderGames()" style="margin-bottom:10px">
         <ul class="admin-list" id="apgList"></ul>
+      </div>
+
+      <div id="apMulti" class="ap-pane" style="display:none">
+        <p class="admin-note">멀티(대전) 게임을 열거나 잠급니다. 잠그면 대전을 시작할 수 없습니다.</p>
+        <ul class="admin-list" id="apMultiList"></ul>
+      </div>
+
+      <div id="apRhythm" class="ap-pane" style="display:none">
+        <p class="admin-note">리듬 게임을 열거나 잠급니다. 잠그면 플레이·랭킹 반영이 막힙니다.</p>
+        <ul class="admin-list" id="apRhythmList"></ul>
       </div>
 
       <div id="apData" class="ap-pane" style="display:none">
@@ -7937,12 +7949,14 @@ var AdminPage = {
     var tabs = btn.parentNode.querySelectorAll('button');
     for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
     btn.classList.add('on');
-    var map = { dash:'apDash', members:'apMembers', games:'apGames', data:'apData' };
+    var map = { dash:'apDash', members:'apMembers', games:'apGames', multi:'apMulti', rhythm:'apRhythm', data:'apData' };
     Object.keys(map).forEach(function(k){
       document.getElementById(map[k]).style.display = (k === name) ? '' : 'none';
     });
     if(name === 'members') this.renderMembers();
     if(name === 'games') this.renderGames();
+    if(name === 'multi') this.renderMulti();
+    if(name === 'rhythm') this.renderRhythm();
     if(name === 'data') this.renderPosts();
   },
 
@@ -8120,9 +8134,9 @@ var AdminPage = {
     toast('회원이 삭제되었습니다.');
   },
 
-  /* ----- 게임관리 ----- */
+  /* ----- 미니게임관리 (리듬은 리듬게임존에서 따로 관리) ----- */
   renderGames: function(){
-    var keys = Object.keys(titles);
+    var keys = Object.keys(titles).filter(function(k){ return k !== 'rhythm'; });
     var q = (document.getElementById('apgSearch').value || '').trim();
     var shown = q ? keys.filter(function(k){ return titles[k].indexOf(q) > -1; }) : keys;
     var lockCount = keys.filter(isLocked).length;
@@ -8151,6 +8165,45 @@ var AdminPage = {
     this.renderGames();
     RankZone.render(); CardRank.render(); GamePager.render();
     toast(lock ? '전체 잠금 🔒' : '전체 열림 🔓');
+  },
+
+  /* ----- 멀티게임존 (가위바위보 대전) ----- */
+  renderMulti: function(){
+    var el = document.getElementById('apMultiList');
+    if(!el) return;
+    var locked = isLocked('rps');
+    el.innerHTML = '<li class="' + (locked ? 'locked' : '') + '">' +
+      '<span class="t">🕹️ 가위바위보 대전</span>' +
+      '<button class="sw ' + (locked ? 'off' : 'on') + '" onclick="AdminPage.multiToggle()">' +
+      (locked ? '🔒 잠금' : '🔓 열림') + '</button></li>';
+  },
+  multiToggle: function(){
+    if(gameLock['rps']) delete gameLock['rps']; else gameLock['rps'] = true;
+    saveLocks();
+    this.renderMulti();
+    toast('가위바위보 대전' + (gameLock['rps'] ? ' 잠금 🔒' : ' 열림 🔓'));
+  },
+
+  /* ----- 리듬게임존 ----- */
+  renderRhythm: function(){
+    var el = document.getElementById('apRhythmList');
+    if(!el) return;
+    var k = 'rhythm';
+    var locked = isLocked(k);
+    el.innerHTML = '<li class="' + (locked ? 'locked' : '') + '">' +
+      '<span class="t">' + titles[k] + '</span>' +
+      '<button class="sw ' + (locked ? 'off' : 'on') + '" onclick="AdminPage.rhythmToggle()">' +
+      (locked ? '🔒 잠금' : '🔓 열림') + '</button></li>';
+  },
+  rhythmToggle: function(){
+    var k = 'rhythm';
+    if(gameLock[k]) delete gameLock[k]; else gameLock[k] = true;
+    saveLocks(); refreshLockUI();
+    this.renderRhythm();
+    if(typeof RankZone !== 'undefined') RankZone.render();
+    if(typeof CardRank !== 'undefined') CardRank.render();
+    if(typeof GamePager !== 'undefined') GamePager.render();
+    toast(titles[k] + (gameLock[k] ? ' 잠금 🔒' : ' 열림 🔓'));
   },
 
   /* ----- 데이터 ----- */
@@ -8332,6 +8385,10 @@ var RPS = {
     if(!(typeof Auth !== 'undefined' && Auth.current)){
       toast('로그인 후 대전할 수 있어요.');
       if(typeof Auth !== 'undefined' && Auth.openLogin) Auth.openLogin();
+      return;
+    }
+    if(typeof isLocked === 'function' && isLocked('rps')){
+      toast('가위바위보 대전은 현재 잠겨 있습니다 🔒');
       return;
     }
     document.getElementById('rpsDim').classList.add('show');
