@@ -1496,6 +1496,7 @@ footer .f-logo span { color: var(--pink); }
       <div class="exp-wrap"><div class="exp-bar" id="expBar"></div></div>
       <div class="exp-text" id="expText">0 / 35 EXP</div>
       <div class="point-display"><small>내 포인트</small><span id="myPoint">1,000</span> P</div>
+      <button class="attend-btn" id="attendBtn" onclick="doAttend()" style="margin-top:10px;">📅 출석체크 (+100P)</button>
     </div>
 
     <div class="side-box chat-box">
@@ -2319,13 +2320,13 @@ function loadUserState(){
   if(typeof Auth !== 'undefined' && Auth.current){
     points = (typeof Auth.current.points === 'number') ? Auth.current.points : 1000;
     exp    = Auth.current.exp || 0;
-    attended = (Auth.current.attendDate === todayStr());
+    attended = !!Auth.current.attendClaimed;
   } else {
     try {
       var g = JSON.parse(localStorage.getItem('gh-guest') || '{}');
       points = (typeof g.points === 'number') ? g.points : 1000;
       exp = g.exp || 0;
-      attended = (g.attendDate === todayStr());
+      attended = !!g.attendClaimed;
     } catch(e){ points = 1000; exp = 0; attended = false; }
   }
   refreshProfileUI();
@@ -2355,7 +2356,7 @@ function refreshProfileUI(){
   var ab = document.getElementById('attendBtn');
   if(ab){
     if(attended){ ab.disabled = true; ab.textContent = '✅ 출석 완료!'; }
-    else { ab.disabled = false; ab.textContent = POINTS_ENABLED ? '📅 오늘 출석체크 (+10P)' : '📅 오늘 출석체크'; }
+    else { ab.disabled = false; ab.textContent = '📅 출석체크 (+100P)'; }
   }
 }
 function gainExp(amount){
@@ -2379,6 +2380,22 @@ function addPoints(n, reason){
   toast(reason + ' <span class="p">+' + fmt(n) + 'P</span>');
   renderRank();
 }
+/* 새 포인트 시스템 전용 지급 경로 (출석·랭킹). POINTS_ENABLED 스위치와 무관하게 지갑에 지급한다. */
+function creditPoints(n, reason){
+  if(!(n > 0)) return;
+  points += n;
+  var mp = document.getElementById('myPoint'); if(mp) mp.textContent = fmt(points);
+  saveUserState();
+  if(reason) toast(reason + ' <span class="p">+' + fmt(n) + 'P</span>');
+  if(typeof renderRank === 'function') renderRank();
+}
+/* 랭킹 포인트 지급 이력 — 게임별 하루 1회, 종합 하루 1회 */
+var RankPay = {
+  data: { games:{}, total:'' },
+  load: function(){ try{ var r = localStorage.getItem('gh-rankpay'); if(r) this.data = JSON.parse(r); }catch(e){} },
+  save: function(){ try{ localStorage.setItem('gh-rankpay', JSON.stringify(this.data)); }catch(e){} }
+};
+RankPay.load();
 let toastTimer;
 function toast(html){
   const t = document.getElementById('toast');
@@ -2398,21 +2415,18 @@ function maybeShowPopup(){
   if(el) el.style.display='none';
 }
 function doAttend(){
-  var today = todayStr();
-  var alreadyToday = (typeof Auth !== 'undefined' && Auth.current)
-    ? (Auth.current.attendDate === today)
-    : (function(){ try { return (JSON.parse(localStorage.getItem('gh-guest')||'{}').attendDate === today); } catch(e){ return false; } })();
-  if(alreadyToday || attended){ toast('오늘은 이미 출석했어요! 내일 또 만나요 👋'); return; }
+  // 아이디(계정)당 딱 한 번만 받을 수 있는 출석 포인트 (+100P)
+  var claimed = (typeof Auth !== 'undefined' && Auth.current)
+    ? !!Auth.current.attendClaimed
+    : (function(){ try { return !!JSON.parse(localStorage.getItem('gh-guest')||'{}').attendClaimed; } catch(e){ return false; } })();
+  if(claimed || attended){ toast('이미 출석 포인트를 받았어요! (아이디당 1회) 👋'); return; }
   attended = true;
-  var sc = addActScore('attend');           // 랭킹 활동점수(로그인 시)
-  points += sc;                              // 지갑 포인트
-  // 출석 날짜 기록
-  if(typeof Auth !== 'undefined' && Auth.current){ Auth.current.attendDate = today; }
-  else { try { var g = JSON.parse(localStorage.getItem('gh-guest')||'{}'); g.attendDate = today; localStorage.setItem('gh-guest', JSON.stringify(g)); } catch(e){} }
+  // 출석 완료 기록 (아이디당 1회)
+  if(typeof Auth !== 'undefined' && Auth.current){ Auth.current.attendClaimed = true; }
+  else { try { var g = JSON.parse(localStorage.getItem('gh-guest')||'{}'); g.attendClaimed = true; localStorage.setItem('gh-guest', JSON.stringify(g)); } catch(e){} }
+  creditPoints(100, '출석체크 완료!');       // 지갑 +100P (저장·UI 갱신 포함)
   saveUserState();
   refreshProfileUI();
-  toast(sc > 0 ? ('출석체크 완료! <span class="p">+' + sc + 'P</span>') : '출석체크 완료! 👋');
-  renderRank();
 }
 
 const now = new Date();
@@ -6718,6 +6732,18 @@ function saveBest(){
 /* 기간이 넘어갔으면 그 기간 기록만 비운다 (전체 기록은 유지) */
 function rollPeriods(){
   var rolled = [];
+  // 새 포인트 시스템: 날짜가 바뀌기 직전, 어제 종합 1·2·3등이면 100/70/50P 지급 (하루 1회)
+  var _curDay = PERIODS.daily.key();
+  if(myKeys.daily && myKeys.daily !== _curDay && RankPay.data.total !== myKeys.daily
+     && typeof RankZone !== 'undefined' && RankZone.timer !== null
+     && typeof Auth !== 'undefined' && Auth.current){
+    try {
+      var _all = RankZone.ranked(RankZone.totals('daily'));
+      var _mine = _all.filter(function(r){ return r.me; })[0];
+      if(_mine && _mine.rank <= 3){ creditPoints([100, 70, 50][_mine.rank - 1], '🏆 어제 종합 ' + _mine.rank + '등 보상!'); }
+      RankPay.data.total = myKeys.daily; RankPay.save();
+    } catch(e){}
+  }
   ['daily'].forEach(function(pd){
     var k = PERIODS[pd].key();
     if(myKeys[pd] !== k){
@@ -6946,7 +6972,7 @@ var RankZone = {
      같은 등수가 여러 명이면 모두 그 등수의 포인트를 받는다.
      예) 2등이 두 명이면 둘 다 2등 포인트를 받고, 그 다음은 4등이 된다. */
   RANK_POINTS: {
-    daily:   [5, 3, 1],
+    daily:   [10, 7, 5],
     weekly:  [20, 15, 10],
     monthly: [50, 30, 15]
   },
@@ -7406,6 +7432,20 @@ var RankSubmit = {
     });
     saveBest();
     this.done = true;
+
+    // 새 포인트 시스템: 이 게임 일일 순위 1·2·3등이면 10/7/5P 지급 (게임당 하루 1회)
+    try {
+      var _dayK = PERIODS.daily.key(), _ck = _dayK + ':' + key;
+      if(!RankPay.data.games[_ck]){
+        var _ranked = RankZone.ranked(RankZone.board(key, 'daily'));
+        var _mine = _ranked.filter(function(r){ return r.me; })[0];
+        var _pay = (_mine && _mine.rank <= 3) ? [10, 7, 5][_mine.rank - 1] : 0;
+        if(_pay){
+          RankPay.data.games[_ck] = true; RankPay.save();
+          creditPoints(_pay, '🎮 ' + ((titles[key]||key).replace(/^\S+\s/,'')) + ' ' + _mine.rank + '등!');
+        }
+      }
+    } catch(e){}
 
     // 실시간 DB에 내 최고 기록을 기록 → 모든 사용자에게 공유
     if(DB.enabled && Auth.current){
