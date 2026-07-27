@@ -500,7 +500,7 @@ footer .f-logo span { color: var(--pink); }
 [data-theme="light"] .rz-panel { background:rgba(255,255,255,.55); }
 .rz-panel h4 { font-family:'DungGeunMo'; font-size:13px; margin-bottom:9px;
   display:flex; align-items:center; justify-content:center; gap:6px; }
-.rz-panel ol { list-style:none; }
+.rz-panel ol { list-style:none; height:340px; overflow-y:auto; }
 .live-ticker {
   display:flex; align-items:center; gap:8px;
   background:rgba(255,79,154,.10); border:1px solid var(--line);
@@ -1469,8 +1469,6 @@ footer .f-logo span { color: var(--pink); }
         </div>
         <div class="rz-tabs" role="tablist">
           <button class="on" role="tab" onclick="RankZone.setPeriod(this,'daily')">일일</button>
-          <button role="tab" onclick="RankZone.setPeriod(this,'weekly')">주간</button>
-          <button role="tab" onclick="RankZone.setPeriod(this,'monthly')">월간</button>
         </div>
       </div>
 
@@ -1484,8 +1482,6 @@ footer .f-logo span { color: var(--pink); }
       <!-- 세 기간의 초기화 시각을 한 번에 보여준다. 탭을 바꾸지 않아도 알 수 있다. -->
       <div class="rz-resets">
         <div class="rr" id="rrDaily"><span>일일 초기화</span><b>--:--:--</b></div>
-        <div class="rr" id="rrWeekly"><span>주간 초기화</span><b>--:--:--</b></div>
-        <div class="rr" id="rrMonthly"><span>월간 초기화</span><b>--:--:--</b></div>
       </div>
 
       <div class="rz-meta">
@@ -1503,15 +1499,7 @@ footer .f-logo span { color: var(--pink); }
         </div>
       </div>
 
-      <div class="rz-foot">
-        <button class="cta" onclick="goGames()">▶ 게임 시작하기</button>
-        <button class="cta ghost" onclick="goGames()">🎮 미니게임존</button>
-      </div>
     </section>
-
-    <div class="quick">
-      <button onclick="goRank()"><span class="ico">🏆</span>랭킹보기</button>
-    </div>
 
   </div>
 
@@ -1934,8 +1922,6 @@ footer .f-logo span { color: var(--pink); }
     </div>
     <div class="rz-tabs" id="rkTabs" role="tablist">
       <button class="on" role="tab" onclick="RankPage.setPeriod(this,'daily')">일일</button>
-      <button role="tab" onclick="RankPage.setPeriod(this,'weekly')">주간</button>
-      <button role="tab" onclick="RankPage.setPeriod(this,'monthly')">월간</button>
     </div>
   </div>
 
@@ -6723,7 +6709,7 @@ function addActScore(kind){
   // 게스트는 포인트는 받지만 랭킹(종합 점수)에는 반영되지 않음
   if(!(typeof Auth !== 'undefined' && Auth.current)) return pt;
   rollPeriods();
-  ['daily','weekly','monthly'].forEach(function(b){ myAct[b] = (myAct[b] || 0) + pt; });
+  ['daily'].forEach(function(b){ myAct[b] = (myAct[b] || 0) + pt; });
   saveBest();
   if(typeof RankZone !== 'undefined' && RankZone.timer !== null) RankZone.render();
   return pt;
@@ -6742,7 +6728,7 @@ function saveBest(){
 /* 기간이 넘어갔으면 그 기간 기록만 비운다 (전체 기록은 유지) */
 function rollPeriods(){
   var rolled = [];
-  ['daily','weekly','monthly'].forEach(function(pd){
+  ['daily'].forEach(function(pd){
     var k = PERIODS[pd].key();
     if(myKeys[pd] !== k){
       if(myKeys[pd]) rolled.push(PERIODS[pd].label);
@@ -6859,7 +6845,7 @@ var RankZone = {
 
     // 세 기간의 남은 시간을 함께 갱신
     var self = this;
-    [['daily','rrDaily'],['weekly','rrWeekly'],['monthly','rrMonthly']].forEach(function(pair){
+    [['daily','rrDaily']].forEach(function(pair){
       var box = document.getElementById(pair[1]);
       if(!box) return;
       var b = box.querySelector('b');
