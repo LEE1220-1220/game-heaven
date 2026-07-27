@@ -1419,7 +1419,7 @@ footer .f-logo span { color: var(--pink); }
       <li id="navMe" style="display:none"><span class="auth-link auth-me">👤 <b id="navNick"></b></span></li>
       <li id="navLogout" style="display:none"><a href="#" class="auth-link" onclick="Auth.logout();return false;">로그아웃</a></li>
       <li><a href="#" class="auth-link">1:1문의</a></li>
-      <li class="online">🟢 접속자 <b id="onlineCnt">128</b></li>
+      <li class="online" style="display:none">🟢 접속자 <b id="onlineCnt">128</b></li>
     </ul>
   </div>
 </div>
@@ -8334,9 +8334,9 @@ var RPS = {
     var eB = ['Gamer','Player','Ninja','Master','King','Star','Wolf','Fox','Hero','Bot','Fist','Blade','Storm','Ghost','Tiger'];
     var pick = function(a){ return a[Math.floor(Math.random()*a.length)]; };
     if(Math.random() < 0.9){
-      return pick(kSurname) + pick(kWord) + (Math.random()<0.55 ? Math.floor(Math.random()*99) : '');
+      return pick(kSurname) + pick(kWord);
     }
-    return pick(eA) + pick(eB) + Math.floor(Math.random()*99);
+    return pick(eA) + pick(eB);
   },
 
   open: function(){
@@ -8378,7 +8378,7 @@ var RPS = {
     this.state = 'searching'; this.opp = null; this.matchId = null; this.iAmReal = false; this.myMove = null;
     this.body('<div class="rps-wrap"><div class="rps-status">🔍 대전 상대를 찾는 중…</div>' +
               '<div class="rps-spin">✊ ✋ ✌️</div>' +
-              '<p class="rps-hint">접속 중인 다른 유저를 찾고 있어요 (없으면 AI와 대전)</p></div>');
+              '<p class="rps-hint">접속 중인 다른 유저를 찾고 있어요</p></div>');
 
     if(!(typeof DB !== 'undefined' && DB.enabled && DB.ref)){
       // 오프라인/로컬: 바로 AI
@@ -8439,10 +8439,9 @@ var RPS = {
   },
 
   showBoard: function(){
-    var vs = this.iAmReal ? '실제 유저' : 'AI';
     this.body(
       '<div class="rps-wrap">' +
-        '<div class="rps-vs">나 <span class="rps-vs-mid">VS</span> <b>' + escapeHtml(this.opp.nick) + '</b> <span class="rps-tag ' + (this.iAmReal?'real':'ai') + '">' + vs + '</span></div>' +
+        '<div class="rps-vs">나 <span class="rps-vs-mid">VS</span> <b>' + escapeHtml(this.opp.nick) + '</b>' + (this.iAmReal ? ' <span class="rps-tag real">실제 유저</span>' : '') + '</div>' +
         '<div class="rps-status" id="rpsStatus">무엇을 낼까요?</div>' +
         '<div class="rps-choices">' +
           '<button onclick="RPS.pick(\'scissors\')">✌️<span>가위</span></button>' +
