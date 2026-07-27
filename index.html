@@ -1511,50 +1511,11 @@ footer .f-logo span { color: var(--pink); }
 
     <div class="quick">
       <button onclick="goRank()"><span class="ico">🏆</span>랭킹보기</button>
-      <button onclick="goBoard('free')"><span class="ico">💬</span>자유게시판</button>
-    </div>
-
-    <div class="sec-title" id="board">
-      <h3>💬 <span>커뮤니티</span></h3>
-      <div class="line"></div>
-      <button class="write-btn" onclick="goBoard('free')">자유게시판 가기 →</button>
-    </div>
-    <div class="board-wrap">
-      <div class="board-tabs">
-        <button class="on" onclick="switchTab(this,'free')">자유게시판</button>
-        <button onclick="switchTab(this,'daily')">일간베스트</button>
-        <button onclick="switchTab(this,'weekly')">주간베스트</button>
-      </div>
-      <ul class="board-list" id="boardList"></ul>
-    </div>
-
-    <div class="two-boards" style="margin-top:14px;">
-      <div class="board-wrap">
-        <div class="board-tabs">
-          <button class="on" onclick="goBoard('guide')">📌 공략게시판 →</button>
-        </div>
-        <ul class="board-list" id="guideList"></ul>
-      </div>
-      <div class="board-wrap">
-        <div class="board-tabs">
-          <button class="on" onclick="goBoard('screenshot')">📸 스크린샷 자랑 →</button>
-        </div>
-        <ul class="board-list" id="shotList"></ul>
-      </div>
     </div>
 
   </div>
 
   <aside class="side-col">
-    <div class="side-box">
-      <h4>📢 <span>공지</span>사항</h4>
-      <ul class="board-list" style="padding:0;">
-        <li style="padding:8px 0;"><span class="t" onclick="goBoard('notice')">🎉 게임천국 정식 오픈 안내</span></li>
-        <li style="padding:8px 0;"><span class="t" onclick="goBoard('notice')">🅿️ 포인트 적립 기준 안내</span></li>
-        <li style="padding:8px 0;"><span class="t" onclick="goBoard('notice')">🏆 주간랭킹 보상 안내</span></li>
-      </ul>
-    </div>
-
     <div class="side-box profile-card">
       <div class="avatar">😎</div>
       <div class="nick" id="profileNick" style="font-size:14px">로그인하셔야 이용가능합니다</div>
@@ -1562,22 +1523,6 @@ footer .f-logo span { color: var(--pink); }
       <div class="exp-wrap"><div class="exp-bar" id="expBar"></div></div>
       <div class="exp-text" id="expText">0 / 35 EXP</div>
       <div class="point-display"><small>내 포인트</small><span id="myPoint">1,000</span> P</div>
-    </div>
-
-    <div class="side-box" id="rank">
-      <h4>🏆 <span>주간</span> 포인트 획득</h4>
-      <p class="rank-note-sm">이번 주에 모은 포인트만 셉니다 · <b id="rankReset">--</b> 후 초기화</p>
-      <ul class="rank-list" id="rankList"></ul>
-    </div>
-
-    <div class="side-box">
-      <h4>⚡ <span>나의</span> 최고기록</h4>
-      <ul class="best-record">
-        <li>두더지잡기 <span class="v" id="bestMole">-</span></li>
-        <li>1~25 순서 클릭 <span class="v" id="bestOrder">-</span></li>
-        <li>스네이크 <span class="v" id="bestSnake">-</span></li>
-        <li>반응속도 <span class="v" id="bestReact">-</span></li>
-      </ul>
     </div>
 
     <div class="side-box chat-box">
@@ -3378,7 +3323,7 @@ games.mole = {
     document.getElementById('moleStart').disabled = false;
     document.getElementById('moleStart').textContent = '다시 하기';
     if(this.score>0) addPoints(this.score*10, '두더지 ' + this.score + '마리!');
-    if(this.score > best.mole){ best.mole = this.score; document.getElementById('bestMole').textContent = this.score+'마리'; addPoints(100,'신기록 보너스!'); }
+    if(this.score > best.mole){ best.mole = this.score; var _bm=document.getElementById('bestMole'); if(_bm) _bm.textContent = this.score+'마리'; addPoints(100,'신기록 보너스!'); }
   },
   stop: function(){ clearInterval(this.timer); clearInterval(this.spawner); },
   destroy: function(){ this.stop(); }
@@ -3528,7 +3473,7 @@ games.snake = {
     msg.innerHTML = '게임 오버! 🍎 ' + this.score + '개 · 다시 도전!';
     if(this.score > best.snake){
       best.snake = this.score;
-      document.getElementById('bestSnake').textContent = this.score+'개';
+      var _bs=document.getElementById('bestSnake'); if(_bs) _bs.textContent = this.score+'개';
       if(this.score>0) addPoints(150,'스네이크 신기록!');
     }
   },
@@ -3575,7 +3520,7 @@ games.react = {
       if(best.react===null || ms < best.react){
         best.react = ms;
         document.getElementById('reactBest').textContent = ms+'ms';
-        document.getElementById('bestReact').textContent = ms+'ms';
+        var _br=document.getElementById('bestReact'); if(_br) _br.textContent = ms+'ms';
         // 빠를수록 많이 준다 (250ms 기준, 150ms면 최대)
       var pt = Math.max(120, Math.min(900, Math.round(900 - (ms - 150) * 3)));
       this.lastMs = ms;
