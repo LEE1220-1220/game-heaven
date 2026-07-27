@@ -1414,7 +1414,6 @@ footer .f-logo span { color: var(--pink); }
     <ul>
       <li><button class="theme-toggle" id="themeBtn" onclick="toggleTheme()"><span class="ic" id="themeIcon">☀️</span><span id="themeLabel">밝은 화면</span></button></li>
       <li id="navLogin"><a href="#" class="auth-link" onclick="Auth.openLogin();return false;">로그인</a></li>
-      <li id="navSignup"><a href="#" class="auth-link" onclick="Auth.openSignup();return false;">회원가입</a></li>
       <li id="navMe" style="display:none"><span class="auth-link auth-me">👤 <b id="navNick"></b></span></li>
       <li id="navLogout" style="display:none"><a href="#" class="auth-link" onclick="Auth.logout();return false;">로그아웃</a></li>
       <li><a href="#" class="auth-link">1:1문의</a></li>
@@ -2153,41 +2152,6 @@ footer .f-logo span { color: var(--pink); }
   </div>
 </div>
 
-<!-- 회원가입 -->
-<div class="modal-dim" id="signupDim" onclick="if(event.target===this)Auth.close()">
-  <div class="modal">
-    <div class="m-head">
-      <b>📝 회원가입</b>
-      <button class="close" onclick="Auth.close()">✕</button>
-    </div>
-    <div class="m-body">
-      <div class="auth-field">
-        <label>이메일 <span class="hint">(비밀번호를 잃어버렸을 때 찾기 위함)</span></label>
-        <input class="g-input" id="suEmail" type="email" placeholder="you@example.com" autocomplete="off"
-               oninput="Auth.clearMsg()">
-      </div>
-      <div class="auth-field">
-        <label>아이디</label>
-        <input class="g-input" id="suId" placeholder="로그인에 사용할 아이디" autocomplete="off"
-               oninput="Auth.clearMsg()">
-      </div>
-      <div class="auth-field">
-        <label>비밀번호</label>
-        <input class="g-input" id="suPw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password"
-               oninput="Auth.clearMsg()">
-      </div>
-      <div class="auth-field">
-        <label>닉네임 <span class="hint">(랭킹에 등록되는 이름 · 30일에 한 번 변경 가능 · 중복 불가)</span></label>
-        <input class="g-input" id="suNick" placeholder="랭킹에 표시될 닉네임" autocomplete="off"
-               oninput="Auth.clearMsg()">
-      </div>
-      <div class="auth-msg" id="suMsg"></div>
-      <button class="auth-submit" onclick="Auth.submit()">가입하기</button>
-      <div class="auth-foot">이미 계정이 있으신가요? <a href="#" onclick="Auth.close();Auth.openLogin();return false;">로그인</a></div>
-    </div>
-  </div>
-</div>
-
 <!-- 로그인 -->
 <div class="modal-dim" id="loginDim" onclick="if(event.target===this)Auth.closeLogin()">
   <div class="modal">
@@ -2209,10 +2173,7 @@ footer .f-logo span { color: var(--pink); }
       <div class="auth-msg" id="liMsg"></div>
       <button class="auth-submit" onclick="Auth.login()">로그인</button>
       <div class="auth-foot" style="margin-top:8px"><a href="#" onclick="Auth.forgotPw();return false;">비밀번호를 잊으셨나요?</a></div>
-      <div class="auth-foot">아직 회원이 아니신가요? <a href="#" onclick="Auth.closeLogin();Auth.openSignup();return false;">회원가입</a>
-        <span style="opacity:.5"> · </span>
-        <a href="#" onclick="Auth.closeLogin();return false;">게스트로 둘러보기</a>
-      </div>
+      <div class="auth-foot" style="opacity:.75">회원 전용입니다. 계정이 필요하면 관리자에게 문의해 주세요.</div>
     </div>
   </div>
 </div>
@@ -8200,10 +8161,15 @@ var AdminPage = {
   changePin: function(){ Admin.changePin(); }
 };
 
-/* 잠긴 게임은 열리지 않는다 */
+/* 로그인한 회원만 게임을 이용할 수 있고, 잠긴 게임은 열리지 않는다 */
 (function(){
   var _open = openGame;
   openGame = function(key){
+    if(!(typeof Auth !== 'undefined' && Auth.current)){
+      toast('🔒 로그인한 회원만 게임을 이용할 수 있어요');
+      if(typeof Auth !== 'undefined' && Auth.openLogin) Auth.openLogin();
+      return;
+    }
     if(isLocked(key)){
       toast(titles[key] + '은(는) 잠겨 있습니다 🔒');
       return;
