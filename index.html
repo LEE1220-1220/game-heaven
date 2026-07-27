@@ -2103,8 +2103,12 @@ footer .f-logo span { color: var(--pink); }
 
       <div id="apMembers" class="ap-pane" style="display:none">
         <div class="admin-bar">
-          <span>회원 <b id="apMemCount">0</b>명</span>
+          <span>회원 <b id="apMemCount">0</b>명 <small style="color:var(--txt-dim)">(대시보드 동기화)</small></span>
+          <span class="admin-bar-btns">
+            <button onclick="AdminPage.setAdminKey()">🔑 연동 키</button>
+          </span>
         </div>
+        <div id="apMemNote" class="admin-note" style="color:var(--danger)"></div>
         <input class="g-input" id="apMemSearch" placeholder="닉네임·아이디·이메일로 찾기" autocomplete="off"
                oninput="AdminPage.renderMembers()" style="margin-bottom:10px">
         <div class="ap-table-wrap">
@@ -7961,10 +7965,68 @@ var AdminPage = {
   },
 
   loadMembers: async function(){
-    try { this.members = await DB.getUsers(); }
-    catch(e){ this.members = []; }
-    // 로컬 계정에 uid 없으면 보강
-    this.members.forEach(function(u){ if(!u.uid) u.uid = Auth.slug(u.id || u.nick || Math.random()); });
+    // 1) 게임천국 자체 계정 (게임 포인트·레벨 등)
+    var ghUsers = [];
+    try { ghUsers = await DB.getUsers(); } catch(e){ ghUsers = []; }
+    ghUsers.forEach(function(u){ if(!u.uid) u.uid = Auth.slug(u.id || u.nick || Math.random()); });
+    var ghById = {};
+    ghUsers.forEach(function(u){ if(u.id) ghById[u.id.toLowerCase()] = u; });
+
+    // 2) 검증천국 대시보드 전체 회원 (관리자 키 필요)
+    this._memberError = '';
+    var dash = null;
+    try {
+      var key = '';
+      try { key = localStorage.getItem('gh-admin-key') || ''; } catch(e){}
+      var r = await fetch('/.netlify/functions/list-members', {
+        method:'POST', headers:{ 'content-type':'application/json', 'x-admin-key': key }
+      });
+      var d = await r.json();
+      if(d && d.ok && Array.isArray(d.members)) dash = d.members;
+      else this._memberError = (d && d.error) || '대시보드 명단을 불러오지 못했습니다.';
+    } catch(e){ this._memberError = '명단 불러오기 실패 (라이브에서만 동작)'; }
+
+    // 3) 병합: 대시보드 회원 기준 + 게임천국 기록 붙이기
+    if(dash){
+      var seen = {};
+      var merged = dash.map(function(m){
+        var low = (m.id||'').toLowerCase(); seen[low] = true;
+        var gh = ghById[low];
+        return {
+          id: m.id,
+          nick: (gh && gh.nick) || m.nick || m.id,
+          uid: gh ? gh.uid : Auth.slug(m.id),
+          points: gh ? (gh.points||0) : 0,
+          exp: gh ? (gh.exp||0) : 0,
+          role: gh ? (gh.role||'user') : 'user',
+          banned: gh ? !!gh.banned : false,
+          createdAt: gh ? (gh.createdAt||0) : 0,
+          email: gh ? (gh.email||'') : '',
+          nickChangedAt: gh ? (gh.nickChangedAt||0) : 0,
+          joinedGame: !!gh,
+          level: m.level
+        };
+      });
+      // 대시보드엔 없지만 게임천국엔 있는 계정도 뒤에 붙임
+      ghUsers.forEach(function(u){
+        if(u.id && !seen[u.id.toLowerCase()]){ u.joinedGame = true; merged.push(u); }
+      });
+      this.members = merged;
+    } else {
+      // 대시보드 못 불러오면 게임천국 계정만 표시
+      ghUsers.forEach(function(u){ u.joinedGame = true; });
+      this.members = ghUsers;
+    }
+  },
+  setAdminKey: async function(){
+    var cur = '';
+    try { cur = localStorage.getItem('gh-admin-key') || ''; } catch(e){}
+    var v = prompt('대시보드 연동 관리자 키를 입력하세요 (Netlify의 ADMIN_KEY 값):', cur);
+    if(v === null) return;
+    try { localStorage.setItem('gh-admin-key', (v||'').trim()); } catch(e){}
+    await this.loadMembers();
+    this.renderMembers(); this.renderDash();
+    toast('연동 키 저장됨 — 회원 명단을 다시 불러왔어요');
   },
 
   renderModeNote: function(){
@@ -8046,11 +8108,16 @@ var AdminPage = {
       });
     }
     document.getElementById('apMemCount').textContent = this.members.length;
+    var noteEl = document.getElementById('apMemNote');
+    if(noteEl) noteEl.innerHTML = this._memberError
+      ? ('⚠️ ' + escapeHtml(this._memberError) + ' &nbsp;<a href="#" onclick="AdminPage.setAdminKey();return false;">🔑 연동 키 입력</a>')
+      : '';
     var rows = document.getElementById('apMemRows');
     if(!list.length){ rows.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--txt-dim)">회원이 없습니다</td></tr>'; return; }
     rows.innerHTML = list.map(function(u){
       var roleBadge = u.role === 'admin' ? '<span class="ap-badge admin">관리자</span>' : '<span class="ap-badge user">일반</span>';
-      var stBadge = u.banned ? '<span class="ap-badge ban">정지</span>' : '<span class="ap-badge ok">정상</span>';
+      var stBadge = u.banned ? '<span class="ap-badge ban">정지</span>'
+        : (u.joinedGame === false ? '<span class="ap-badge">미접속</span>' : '<span class="ap-badge ok">정상</span>');
       var uid = u.uid;
       return '<tr>' +
         '<td>' + escapeHtml(u.nick||'') + '</td>' +
