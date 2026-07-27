@@ -3,6 +3,11 @@
 [build]
   publish = "."
 
+# Firebase 웹 apiKey는 공개용(비밀 아님)이라 false positive가 남 → 비밀값 스캔 끔.
+# 실제 비밀(DASH_PW 등)은 Netlify 환경변수로만 있고 빌드 파일엔 없음.
+[build.environment]
+  SECRETS_SCAN_ENABLED = "false"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
