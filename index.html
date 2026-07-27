@@ -601,13 +601,13 @@ footer .f-logo span { color: var(--pink); }
 
 
 /* 기간별 초기화 시각 */
-.rz-resets { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:12px; }
+.rz-resets { display:grid; grid-template-columns:1fr; gap:7px; margin-top:12px; }
 .rz-resets .rr { background:rgba(0,0,0,.22); border:1px solid var(--line); border-radius:9px;
-  padding:7px 8px; text-align:center; }
+  padding:14px 16px; text-align:center; }
 [data-theme="light"] .rz-resets .rr { background:rgba(255,255,255,.55); }
 .rz-resets .rr.on { border-color:var(--pink); background:rgba(255,79,154,.1); }
-.rz-resets .rr span { display:block; font-size:10px; color:var(--txt-dim); }
-.rz-resets .rr b { font-family:'DungGeunMo'; font-size:13px; color:var(--yellow); }
+.rz-resets .rr span { display:block; font-size:12px; color:var(--txt-dim); margin-bottom:4px; }
+.rz-resets .rr b { font-family:'DungGeunMo'; font-size:18px; color:var(--yellow); letter-spacing:1px; }
 .rz-resets .rr.on b { color:var(--pink); }
 .rank-note-sm { font-size:10px; color:var(--txt-dim); margin:-4px 0 8px; line-height:1.5; }
 .rank-note-sm b { color:var(--yellow); font-family:'DungGeunMo'; }
@@ -1482,21 +1482,6 @@ footer .f-logo span { color: var(--pink); }
       <!-- 세 기간의 초기화 시각을 한 번에 보여준다. 탭을 바꾸지 않아도 알 수 있다. -->
       <div class="rz-resets">
         <div class="rr" id="rrDaily"><span>일일 초기화</span><b>--:--:--</b></div>
-      </div>
-
-      <div class="rz-meta">
-        <div class="rz-box">
-          <span class="lb">⏳ 선택한 기간</span>
-          <b id="rzReset">--:--:--</b>
-        </div>
-        <div class="rz-box" id="rzPayBox">
-          <span class="lb">🎁 상금 지급</span>
-          <b id="rzPayTime">매일 00:00</b>
-        </div>
-        <div class="rz-box wide" id="rzPrizeBox">
-          <span class="lb">💰 상금</span>
-          <b id="rzPrize"></b>
-        </div>
       </div>
 
     </section>
@@ -6838,7 +6823,7 @@ var RankZone = {
     var rolled = rollPeriods();
     if(rolled.length){
       this.render();
-      toast(rolled.join('·') + ' 랭킹이 초기화되었습니다 🎁 상금 지급 완료');
+      toast(rolled.join('·') + ' 랭킹이 초기화되었습니다 🔄');
     }
     var el = document.getElementById('rzReset');
     if(el) el.textContent = this.fmtLeft(PERIODS[this.period].next());
@@ -7009,13 +6994,14 @@ var RankZone = {
     var P = PERIODS[this.period];
     document.getElementById('rzTitle').textContent = P.icon + ' ' + P.label + ' 랭킹';
     document.getElementById('rzRange').textContent = P.range();
-    // 상금이 있는 기간에만 지급 시각·상금을 보여준다
+    // 상금이 있는 기간에만 지급 시각·상금을 보여준다 (관련 박스는 삭제되어 있을 수 있음)
     var hasPrize = !!P.prize;
-    document.getElementById('rzPayBox').style.display = hasPrize ? '' : 'none';
-    document.getElementById('rzPrizeBox').style.display = hasPrize ? '' : 'none';
+    var _payBox = document.getElementById('rzPayBox');   if(_payBox)   _payBox.style.display   = hasPrize ? '' : 'none';
+    var _prizeBox = document.getElementById('rzPrizeBox'); if(_prizeBox) _prizeBox.style.display = hasPrize ? '' : 'none';
     if(hasPrize){
-      document.getElementById('rzPayTime').textContent = P.payLabel;
-      document.getElementById('rzPrize').textContent =
+      var _payTime = document.getElementById('rzPayTime'); if(_payTime) _payTime.textContent = P.payLabel;
+      var _prize = document.getElementById('rzPrize');
+      if(_prize) _prize.textContent =
         '🥇 ' + P.prizeFmt(P.prize[0]) + ' · 🥈 ' + P.prizeFmt(P.prize[1]) + ' · 🥉 ' + P.prizeFmt(P.prize[2]);
     }
 
