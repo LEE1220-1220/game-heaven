@@ -1459,13 +1459,6 @@ footer .f-logo span { color: var(--pink); }
       <a href="#" onclick="goMulti();return false;">🕹️ 게임존(멀티)</a>
     </li>
     <li><a href="#" onclick="goRank();return false;">🏆 랭킹</a></li>
-    <li>
-      <a href="#">🎁 포인트존</a>
-      <ul class="sub">
-        <li><a href="#" onclick="doAttend();return false;">출석체크</a></li>
-        <li><a href="#rank">포인트 랭킹</a></li>
-      </ul>
-    </li>
   </ul>
 </nav>
 
@@ -1569,7 +1562,7 @@ footer .f-logo span { color: var(--pink); }
 
     <div class="side-box profile-card">
       <div class="avatar">😎</div>
-      <div class="nick" id="profileNick">게스트유저</div>
+      <div class="nick" id="profileNick" style="font-size:14px">로그인하셔야 이용가능합니다</div>
       <div class="lv" id="profileLv">Lv.1</div>
       <div class="exp-wrap"><div class="exp-bar" id="expBar"></div></div>
       <div class="exp-text" id="expText">0 / 35 EXP</div>
@@ -2757,7 +2750,10 @@ var Auth = {
     if(adm) adm.style.display = this.isAdmin() ? '' : 'none';
     // 프로필 카드 닉네임
     var pn = document.getElementById('profileNick');
-    if(pn) pn.textContent = on ? this.current.nick : '게스트유저';
+    if(pn){
+      if(on){ pn.textContent = this.current.nick; pn.style.fontSize = ''; }
+      else { pn.textContent = '로그인하셔야 이용가능합니다'; pn.style.fontSize = '14px'; }
+    }
     // 채팅 닉네임
     var cm = document.getElementById('chatMe');
     if(cm) cm.textContent = on ? this.current.nick : (typeof myNickname!=='undefined'?myNickname:'게스트유저');
