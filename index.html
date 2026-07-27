@@ -2281,6 +2281,9 @@ function toggleTheme(){ setTheme(theme === 'dark' ? 'light' : 'dark'); }
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
 /* ===================== 공통 상태 ===================== */
+/* 포인트 습득 전체 스위치. false 이면 출석·글·댓글·게임 등 어떤 방법으로도
+   포인트가 오르지 않는다. 재설정할 때 true 로 바꾸거나 지급 로직을 다시 짜면 된다. */
+let POINTS_ENABLED = false;
 let points = 1000;
 let attended = false;
 let exp = 0;
@@ -2352,7 +2355,7 @@ function refreshProfileUI(){
   var ab = document.getElementById('attendBtn');
   if(ab){
     if(attended){ ab.disabled = true; ab.textContent = '✅ 출석 완료!'; }
-    else { ab.disabled = false; ab.textContent = '📅 오늘 출석체크 (+10P)'; }
+    else { ab.disabled = false; ab.textContent = POINTS_ENABLED ? '📅 오늘 출석체크 (+10P)' : '📅 오늘 출석체크'; }
   }
 }
 function gainExp(amount){
@@ -2369,6 +2372,7 @@ function gainExp(amount){
 
 function fmt(n){ return n.toLocaleString('ko-KR'); }
 function addPoints(n, reason){
+  if(!POINTS_ENABLED) return;               // 포인트 습득 비활성화 (재설정 예정)
   points += n;
   var mp = document.getElementById('myPoint'); if(mp) mp.textContent = fmt(points);
   saveUserState();
@@ -2407,7 +2411,7 @@ function doAttend(){
   else { try { var g = JSON.parse(localStorage.getItem('gh-guest')||'{}'); g.attendDate = today; localStorage.setItem('gh-guest', JSON.stringify(g)); } catch(e){} }
   saveUserState();
   refreshProfileUI();
-  toast('출석체크 완료! <span class="p">+' + sc + 'P</span>');
+  toast(sc > 0 ? ('출석체크 완료! <span class="p">+' + sc + 'P</span>') : '출석체크 완료! 👋');
   renderRank();
 }
 
@@ -6689,6 +6693,7 @@ var ACT_SCORE = { attend: 10, post: 3, comment: 1 };
 
 /** 활동 포인트를 세 기간에 함께 더한다 */
 function addActScore(kind){
+  if(!POINTS_ENABLED) return 0;             // 포인트 습득 비활성화 (재설정 예정)
   var pt = ACT_SCORE[kind] || 0;
   if(!pt) return 0;
   // 게스트는 포인트는 받지만 랭킹(종합 점수)에는 반영되지 않음
