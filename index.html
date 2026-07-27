@@ -7114,6 +7114,8 @@ var LiveFeed = {
       if(RankZone.timer !== null) RankZone.render();
       if(typeof CardRank !== 'undefined') CardRank.render();
       if(typeof renderRank === 'function') renderRank();
+      // 전체 랭킹 페이지를 보고 있으면 그 화면도 실시간으로 다시 그린다
+      if(typeof RankPage !== 'undefined' && RankPage.timer !== null) RankPage.render();
 
       // 새 등록이면 티커에 표시
       if(newest && newest.at > self.lastAt){
